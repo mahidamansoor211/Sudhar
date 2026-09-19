@@ -8,7 +8,11 @@ export default function ProtectedRoute({ children, roles = null }) {
   const location = useLocation();
 
   if (loading) {
-    return <div className="full-page-center">Loading...</div>;
+    return (
+      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center text-gray-500">
+        Loading...
+      </div>
+    );
   }
 
   if (!user) {

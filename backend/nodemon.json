@@ -1,0 +1,7 @@
+{
+  "watch": ["src"],
+  "ignore": ["src/**/*.test.js"],
+  "ext": "js,json",
+  "exec": "node src/index.js",
+  "verbose": false
+}

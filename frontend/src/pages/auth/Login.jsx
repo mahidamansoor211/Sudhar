@@ -29,16 +29,20 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <h1 className="auth-title">Sudhar — Lahore</h1>
-        <p className="auth-subtitle">Sign in to track or resolve civic issues</p>
+    <div className="flex min-h-[calc(100vh-64px)] items-start justify-center px-4 pb-12 pt-24">
+      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-md">
+        <h1 className="mb-1 text-2xl font-bold text-gray-800">Sudhar — Lahore</h1>
+        <p className="mb-6 text-gray-500">Sign in to track or resolve civic issues</p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-600 bg-red-100 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="form-field">
-            <span>Email</span>
+        <form onSubmit={handleSubmit}>
+          <label className="mb-4 flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-gray-800">Email</span>
             <input
               type="email"
               name="email"
@@ -47,11 +51,12 @@ export default function Login() {
               required
               autoComplete="email"
               placeholder="you@example.com"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </label>
 
-          <label className="form-field">
-            <span>Password</span>
+          <label className="mb-6 flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-gray-800">Password</span>
             <input
               type="password"
               name="password"
@@ -60,16 +65,24 @@ export default function Login() {
               required
               autoComplete="current-password"
               placeholder="••••••••"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </label>
 
-          <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Don&apos;t have an account? <Link to="/register">Sign up</Link>
+        <p className="mt-5 text-center text-sm text-gray-500">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="font-medium text-blue-600 hover:underline">
+            Sign up
+          </Link>
         </p>
       </div>
     </div>

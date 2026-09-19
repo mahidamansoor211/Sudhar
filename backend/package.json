@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon",
+    "fixports": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; Write-Host 'Port 5000 cleared'\""
   },
   "keywords": [
     "civic",
@@ -16,12 +17,15 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1134.0",
+    "@aws-sdk/lib-storage": "^3.1134.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.5",
+    "multer": "^2.4.0",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
