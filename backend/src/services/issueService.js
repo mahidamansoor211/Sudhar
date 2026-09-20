@@ -1,6 +1,7 @@
 const Issue = require('../models/Issue');
 const ApiError = require('../utils/ApiError');
 const { notifyUser } = require('./socketService');
+const { notifyIssueStakeholders } = require('./notificationService');
 const {
   CATEGORY_TO_DEPARTMENT,
   SLA_MS,
@@ -54,6 +55,17 @@ const createIssue = async ({ title, description, category, lng, lat, address, im
         note: 'Issue reported by citizen',
       },
     ],
+  });
+
+  // Let the receiving department's staff (and admins) know a new report arrived.
+  await notifyIssueStakeholders({
+    department,
+    payload: {
+      type: 'new_issue',
+      issueId: issue._id,
+      title: 'New issue in your queue',
+      message: `"${title}" (${category}) reported at ${address || 'an unlabeled location'}.`,
+    },
   });
 
   return { issue, department };
@@ -166,6 +178,19 @@ const flagIssue = async (issueId, userId) => {
     issue.flaggedAsSpam = true;
   }
   await issue.save();
+
+  await notifyIssueStakeholders({
+    department: issue.department,
+    payload: {
+      type: 'flag',
+      issueId: issue._id,
+      title: issue.flaggedAsSpam
+        ? 'Report marked as spam'
+        : 'A report was flagged',
+      message: `"${issue.title}" was flagged for review${issue.flaggedAsSpam ? ' and is now marked as spam.' : '.'}`,
+    },
+  });
+
   return { flagCount: issue.flaggedBy.length, flaggedAsSpam: issue.flaggedAsSpam };
 };
 
@@ -197,6 +222,18 @@ const confirmResolution = async (issueId, userId, { confirmationImages = [] }) =
       : 'Resolution confirmed by reporter',
   });
   await issue.save();
+
+  // Let the department + admins know the citizen verified the fix.
+  await notifyIssueStakeholders({
+    department: issue.department,
+    excludeUserId: userId,
+    payload: {
+      type: 'resolution_confirmed',
+      issueId: issue._id,
+      title: 'Resolution confirmed by citizen',
+      message: `"${issue.title}" was verified as fixed by the reporter.`,
+    },
+  });
 
   return { resolutionConfirmedByReporter: true };
 };

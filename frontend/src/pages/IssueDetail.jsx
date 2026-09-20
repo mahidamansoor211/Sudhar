@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { issues, getImageUrl, getApiErrorMessage } from '../services/api';
-import { categoryByValue, STATUS_LABELS } from '../utils/constants';
+import { issues, staff, getImageUrl, getApiErrorMessage } from '../services/api';
+import {
+  categoryByValue,
+  STATUS_LABELS,
+  STATUS_TRANSITIONS,
+  PRIORITIES,
+  PRIORITY_LABELS,
+} from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -18,6 +24,12 @@ export default function IssueDetail() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmSuccess, setConfirmSuccess] = useState(false);
   const [confirmImages, setConfirmImages] = useState([]);
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [selectedAssignee, setSelectedAssignee] = useState('');
+  const [staffActionLoading, setStaffActionLoading] = useState(false);
+
+  const fetchIssue = () =>
+    issues.get(id).then(({ data }) => setIssue(data.issue));
 
   useEffect(() => {
     let active = true;
@@ -36,6 +48,49 @@ export default function IssueDetail() {
       active = false;
     };
   }, [id]);
+
+  // Staff/admin: load assignable staff for this department once.
+  useEffect(() => {
+    if (user && (user.role === 'staff' || user.role === 'admin')) {
+      staff
+        .members()
+        .then(({ data }) => setStaffMembers(data.staff))
+        .catch(() => {});
+    }
+  }, [user]);
+
+  const canManage = () =>
+    issue &&
+    user &&
+    (user.role === 'admin' ||
+      (user.role === 'staff' && issue.department === user.department));
+
+  const nextStatuses = issue ? STATUS_TRANSITIONS[issue.status] || [] : [];
+
+  const runStaffAction = async (fn) => {
+    setStaffActionLoading(true);
+    setError(null);
+    try {
+      await fn();
+      await fetchIssue();
+      refreshUnread().catch(() => {});
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Action failed'));
+    } finally {
+      setStaffActionLoading(false);
+    }
+  };
+
+  const handleStatusChange = (status) =>
+    runStaffAction(() => staff.changeStatus(id, { status }));
+
+  const handleAssign = () => {
+    if (!selectedAssignee) return;
+    runStaffAction(() => staff.assign(id, { assignedTo: selectedAssignee }));
+  };
+
+  const handlePriority = (priority) =>
+    runStaffAction(() => staff.setPriority(id, priority));
 
   const handleUpvote = async () => {
     if (!user) {
@@ -252,6 +307,89 @@ export default function IssueDetail() {
             ✅ You confirmed this issue is resolved.
           </div>
         )}
+
+      {canManage() && (
+        <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50/50 p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-gray-800">
+              {user.role === 'admin' ? 'Admin actions' : `${issue.department} staff actions`}
+            </h2>
+            <span className="text-xs text-gray-500">
+              Assignee:{' '}
+              {issue.assignedTo ? issue.assignedTo.name : 'Not assigned yet'}
+            </span>
+          </div>
+
+          {/* Status transitions */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">Move to:</span>
+            {nextStatuses.length === 0 ? (
+              <span className="text-sm text-gray-400">No further transitions allowed.</span>
+            ) : (
+              nextStatuses.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={staffActionLoading}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
+                    s === 'rejected'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : s === 'resolved'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {STATUS_LABELS[s]}
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Assign when acknowledged */}
+          {issue.status === 'acknowledged' && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <select
+                value={selectedAssignee}
+                onChange={(e) => setSelectedAssignee(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-600 focus:outline-none"
+              >
+                <option value="">Assign to staff member…</option>
+                {staffMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} {m.department ? `(${m.department})` : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAssign}
+                disabled={staffActionLoading || !selectedAssignee}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+              >
+                Assign
+              </button>
+            </div>
+          )}
+
+          {/* Priority + admin reroute */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">Priority:</span>
+            {PRIORITIES.map((p) => (
+              <button
+                key={p}
+                onClick={() => handlePriority(p)}
+                disabled={staffActionLoading || issue.priority === p}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors disabled:cursor-default ${
+                  issue.priority === p
+                    ? 'bg-gray-800 text-white'
+                    : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {PRIORITY_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 font-semibold text-gray-800">Status history</h2>

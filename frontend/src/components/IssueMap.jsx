@@ -1,9 +1,24 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { categoryIcon, LAHORE_CENTER, LAHORE_ZOOM } from '../utils/leaflet';
 import { categoryByValue } from '../utils/constants';
 import { getImageUrl } from '../services/api';
+
+// leaflet.markercluster is a UMD plugin that augments the *global* Leaflet
+// instance, so it must load after window.L is set and can only be imported
+// dynamically to guarantee execution order.
+let clusterReady = null;
+function ensureMarkerCluster() {
+  if (L.markerClusterGroup) return Promise.resolve();
+  if (!clusterReady) {
+    window.L = L;
+    clusterReady = import('leaflet.markercluster');
+  }
+  return clusterReady;
+}
 
 // Adds a leaflet.markercluster group and syncs it with the issues prop.
 function MarkerCluster({ issues }) {
@@ -11,24 +26,33 @@ function MarkerCluster({ issues }) {
   const groupRef = useRef(null);
 
   useEffect(() => {
-    const group = L.markerClusterGroup({
-      maxClusterRadius: 45,
-      showCoverageOnHover: false,
-    });
+    let disposed = false;
 
-    issues.forEach((issue) => {
-      const [lng, lat] = issue.location.coordinates;
-      const marker = L.marker([lat, lng], {
-        icon: categoryIcon(iconColor(issue.category)),
+    ensureMarkerCluster().then(() => {
+      if (disposed) return;
+      const group = L.markerClusterGroup({
+        maxClusterRadius: 45,
+        showCoverageOnHover: false,
       });
-      marker.bindPopup(popupHtml(issue));
-      group.addLayer(marker);
-    });
 
-    groupRef.current = group;
-    map.addLayer(group);
+      issues.forEach((issue) => {
+        const [lng, lat] = issue.location.coordinates;
+        const marker = L.marker([lat, lng], {
+          icon: categoryIcon(iconColor(issue.category)),
+        });
+        marker.bindPopup(popupHtml(issue));
+        group.addLayer(marker);
+      });
+
+      if (disposed) {
+        return;
+      }
+      groupRef.current = group;
+      map.addLayer(group);
+    });
 
     return () => {
+      disposed = true;
       if (groupRef.current) {
         map.removeLayer(groupRef.current);
         groupRef.current = null;

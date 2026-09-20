@@ -23,6 +23,15 @@ const STATUSES = [
 
 const PRIORITIES = ['low', 'medium', 'high'];
 
+const STATUS_LABELS = {
+  reported: 'Reported',
+  acknowledged: 'Acknowledged',
+  assigned: 'Assigned',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+  rejected: 'Rejected',
+};
+
 // Enforced server-side status state machine.
 // Each key maps to the only statuses it may transition TO.
 const STATUS_TRANSITIONS = {
@@ -51,6 +60,7 @@ module.exports = {
   CATEGORIES,
   STATUSES,
   PRIORITIES,
+  STATUS_LABELS,
   STATUS_TRANSITIONS,
   SLA_MS,
   DEFAULT_OTHER_DEPARTMENT,

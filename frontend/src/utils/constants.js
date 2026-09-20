@@ -34,6 +34,23 @@ export const STATUS_LABELS = {
   rejected: 'Rejected',
 };
 
+export const STATUS_TRANSITIONS = {
+  reported: ['acknowledged', 'rejected'],
+  acknowledged: ['assigned'],
+  assigned: ['in_progress'],
+  in_progress: ['resolved'],
+  resolved: ['reported', 'acknowledged'],
+  rejected: [],
+};
+
+export const PRIORITIES = ['low', 'medium', 'high'];
+
+export const PRIORITY_LABELS = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
 export const STATUS_COLORS = {
   reported: 'bg-gray-500',
   acknowledged: 'bg-blue-500',
@@ -41,4 +58,10 @@ export const STATUS_COLORS = {
   in_progress: 'bg-amber-500',
   resolved: 'bg-green-600',
   rejected: 'bg-red-600',
+};
+
+export const PRIORITY_BADGE = {
+  low: 'bg-gray-100 text-gray-600',
+  medium: 'bg-amber-100 text-amber-700',
+  high: 'bg-red-100 text-red-700',
 };

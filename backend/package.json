@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon",
+    "seed": "node src/seed.js",
     "fixports": "powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; Write-Host 'Port 5000 cleared'\""
   },
   "keywords": [

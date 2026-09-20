@@ -1,4 +1,32 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const { notifyUser } = require('./socketService');
+
+// Notifies every active staff member of a department about a payload.
+const notifyDepartment = async ({ department, excludeUserId, payload }) => {
+  if (!department) return;
+  const staff = await User.find({ role: 'staff', isActive: true, department }).select('_id');
+  for (const member of staff) {
+    if (excludeUserId && member._id.equals(excludeUserId)) continue;
+    await notifyUser(member._id, payload);
+  }
+};
+
+// Notifies every active admin about a payload.
+const notifyAdmins = async ({ excludeUserId, payload }) => {
+  const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+  for (const admin of admins) {
+    if (excludeUserId && admin._id.equals(excludeUserId)) continue;
+    await notifyUser(admin._id, payload);
+  }
+};
+
+// Routes a payload to whatever group should see an issue: its department's
+// staff plus all admins (admins triage "other" and oversee everything).
+const notifyIssueStakeholders = async ({ department, excludeUserId, payload }) => {
+  await notifyDepartment({ department, excludeUserId, payload });
+  await notifyAdmins({ excludeUserId, payload });
+};
 
 const getUserNotifications = async (userId, { limit = 50, unreadOnly = false } = {}) => {
   const query = { recipient: userId };
@@ -43,4 +71,12 @@ const unreadCount = async (userId) => {
   return Notification.countDocuments({ recipient: userId, read: false });
 };
 
-module.exports = { getUserNotifications, markAsRead, markAllAsRead, unreadCount };
+module.exports = {
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
+  unreadCount,
+  notifyDepartment,
+  notifyAdmins,
+  notifyIssueStakeholders,
+};

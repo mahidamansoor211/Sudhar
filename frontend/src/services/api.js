@@ -63,6 +63,25 @@ export const notifications = {
   markAllAsRead: () => api.post('/notifications/read-all'),
 };
 
+export const staff = {
+  queue: (params) => api.get('/staff/issues', { params }),
+  stats: () => api.get('/staff/stats'),
+  members: () => api.get('/staff/members'),
+  changeStatus: (id, data) => api.patch(`/staff/issues/${id}/status`, data),
+  assign: (id, data) => api.post(`/staff/issues/${id}/assign`, data),
+  setPriority: (id, priority) => api.patch(`/staff/issues/${id}/priority`, { priority }),
+  reroute: (id, department) => api.patch(`/staff/issues/${id}/reroute`, { department }),
+};
+
+export const admin = {
+  stats: () => api.get('/admin/stats'),
+  issues: (params) => api.get('/admin/issues', { params }),
+  users: (params) => api.get('/admin/users', { params }),
+  setUserActive: (id, isActive) =>
+    api.patch(`/admin/users/${id}/status`, { isActive }),
+  clearSpam: (id) => api.post(`/admin/issues/${id}/clear-spam`),
+};
+
 export const getApiErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
   return error?.response?.data?.message || error?.message || fallback;
 };

@@ -8,6 +8,8 @@ const env = require('./config/env');
 const authRoutes = require('./routes/authRoutes');
 const issueRoutes = require('./routes/issueRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const staffRoutes = require('./routes/staffRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { initSocket } = require('./services/socketService');
 const { notFound, errorHandler } = require('./middleware/error');
 
@@ -48,6 +50,8 @@ async function start() {
   app.use('/api/auth', authRoutes);
   app.use('/api/issues', issueRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/staff', staffRoutes);
+  app.use('/api/admin', adminRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
