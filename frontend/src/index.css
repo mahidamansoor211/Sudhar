@@ -1,24 +1,242 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "leaflet.markercluster/dist/MarkerCluster.css";
 @import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Neutral base with a faint hint of Pakistan green — green stays a brand accent,
+   not a full-page wash. */
 body {
   font-family: var(--font-sans);
+  color: #1e293b;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 18% 10%, rgba(16, 185, 129, 0.1), transparent 55%),
+    radial-gradient(at 85% 5%, rgba(13, 148, 136, 0.07), transparent 55%),
+    radial-gradient(at 90% 95%, rgba(6, 95, 70, 0.06), transparent 55%),
+    radial-gradient(at 5% 90%, rgba(16, 185, 129, 0.06), transparent 55%);
+  background-attachment: fixed;
 }
 
-.leaflet-container {
-  z-index: 0;
-}
+@layer components {
+  /* Frosted glass panel — the base card everywhere. */
+  .glass {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+    box-shadow:
+      0 1px 1px rgba(15, 23, 42, 0.03),
+      0 12px 32px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  }
 
-.leaflet-popup-content-wrapper {
-  border-radius: 12px;
-}
+  .glass-strong {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.78);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+      0 2px 6px rgba(15, 23, 42, 0.04),
+      0 20px 45px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
 
-.leaflet-container a.leaflet-popup-close-button {
-  color: #6b7280;
+  /* Frosted form controls */
+  .glass-input {
+    width: 100%;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    color: #062f1d;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+  }
+  .glass-input::placeholder {
+    color: #6ba389;
+  }
+
+  .glass-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23065f46' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+  }
+
+  /* Gradient primary button (Pakistan-green) */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.9rem;
+    padding: 0.7rem 1.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    cursor: pointer;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none !important;
+  }
+
+  .btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #059669 0%, #10b981 55%, #134e4a 160%);
+    box-shadow: 0 10px 24px rgba(5, 150, 105, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(5, 150, 105, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .btn-secondary {
+    color: #047857;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(6, 95, 70, 0.14);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+  }
+
+  .btn-success {
+    color: #fff;
+    background: linear-gradient(135deg, #059669 0%, #0d9488 130%);
+    box-shadow: 0 10px 24px rgba(5, 150, 105, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .btn-success:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger {
+    color: #fff;
+    background: linear-gradient(135deg, #dc2626 0%, #f97316 130%);
+    box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .btn-danger:hover:not(:disabled) {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+
+  /* Gradient headline text */
+  .text-gradient {
+    background: linear-gradient(120deg, #047857 0%, #10b981 45%, #0d9488 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Pills / chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 9999px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* Section eyebrow label */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.12);
+    padding: 0.35rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #047857;
+  }
+
+  /* Card hover lift used across cards & links */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 4px 8px rgba(15, 23, 42, 0.05),
+      0 22px 48px rgba(15, 23, 42, 0.14);
+    border-color: rgba(16, 185, 129, 0.45);
+  }
+
+  /* Leaflet containers sit inside glass wells */
+  .leaflet-container {
+    z-index: 0;
+  }
+  .map-well {
+    border-radius: 1.25rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  }
+
+  .leaflet-container a.leaflet-popup-close-button {
+    color: #64748b;
+  }
+
+  /* Custom scrollbar keeps the frosted feel on list panels */
+  .glass-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  .glass-scroll::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.35);
+    border-radius: 8px;
+  }
+  .glass-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Subtle float animation for hero ornaments */
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .float-slow {
+    animation: float-y 6s ease-in-out infinite;
+  }
+  .float-slower {
+    animation: float-y 8s ease-in-out infinite;
+    animation-delay: 1.2s;
+  }
 }

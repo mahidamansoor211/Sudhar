@@ -18,6 +18,7 @@ const COLOR_HEX = {
   green: '#16a34a',
   blue: '#0284c7',
   purple: '#9333ea',
+  emerald: '#059669',
 };
 
 // A colored circular pin with an optional emoji/label, used for category markers.

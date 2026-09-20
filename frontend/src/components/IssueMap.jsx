@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { categoryIcon, LAHORE_CENTER, LAHORE_ZOOM } from '../utils/leaflet';
 import { categoryByValue } from '../utils/constants';
 import { getImageUrl } from '../services/api';
@@ -77,8 +77,8 @@ const popupHtml = (issue) => {
       <strong style="font-size:14px;">${issue.title}</strong>
       <div style="font-size:12px;color:#6b7280;">${category.label} · ${issue.status}</div>
       ${issue.address ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${issue.address}</div>` : ''}
-      <div style="font-size:12px;margin-top:4px;">▲ ${issue.upvoteCount} upvote${issue.upvoteCount === 1 ? '' : 's'}</div>
-      <a href="/issues/${issue.id}" style="display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:#2563eb;text-decoration:none;">View details →</a>
+      <div style="font-size:12px;margin-top:4px;">${issue.upvoteCount} upvote${issue.upvoteCount === 1 ? '' : 's'}</div>
+      <a href="/issues/${issue.id}" style="display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:#059669;text-decoration:none;">View details →</a>
     </div>
   `;
 };
@@ -88,7 +88,7 @@ export default function IssueMap({ issues }) {
     <MapContainer
       center={LAHORE_CENTER}
       zoom={LAHORE_ZOOM}
-      className="h-[60vh] w-full rounded-xl border border-gray-200 shadow-sm"
+      className="h-[60vh] w-full"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

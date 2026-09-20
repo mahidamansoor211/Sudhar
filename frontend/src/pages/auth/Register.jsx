@@ -3,9 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage } from '../../services/api';
 
-const inputClass =
-  'rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600';
-
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -42,86 +39,52 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] items-start justify-center px-4 pb-12 pt-24">
-      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-md">
-        <h1 className="mb-1 text-2xl font-bold text-gray-800">Create your account</h1>
-        <p className="mb-6 text-gray-500">Report issues and track their resolution</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-24">
+      <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
+
+      <div className="glass-strong card-hover w-full max-w-md p-8 sm:p-10">
+        <div className="mb-7 text-center">
+          <img src="/images/logo.png" alt="Sudhar logo" className="mx-auto mb-4 h-16 w-auto" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-emerald-950">Create your account</h1>
+          <p className="mt-1 text-slate-500">Report issues and track their resolution</p>
+        </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-600 bg-red-100 px-4 py-3 text-sm text-red-600">
+          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm font-medium text-rose-600 backdrop-blur">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <label className="mb-4 flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-gray-800">Full name</span>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              autoComplete="name"
-              placeholder="Your name"
-              className={inputClass}
-            />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold text-emerald-900">Full name</span>
+            <input type="text" name="name" value={form.name} onChange={handleChange} required autoComplete="name" placeholder="Your name" className="glass-input" />
           </label>
 
-          <label className="mb-4 flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-gray-800">Email</span>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              className={inputClass}
-            />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold text-emerald-900">Email</span>
+            <input type="email" name="email" value={form.email} onChange={handleChange} required autoComplete="email" placeholder="you@example.com" className="glass-input" />
           </label>
 
-          <label className="mb-4 flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-gray-800">Password</span>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              autoComplete="new-password"
-              placeholder="At least 8 characters"
-              className={inputClass}
-            />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold text-emerald-900">Password</span>
+            <input type="password" name="password" value={form.password} onChange={handleChange} required autoComplete="new-password" placeholder="At least 8 characters" className="glass-input" />
           </label>
 
-          <label className="mb-6 flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-gray-800">Confirm password</span>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              required
-              autoComplete="new-password"
-              placeholder="Re-enter password"
-              className={inputClass}
-            />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold text-emerald-900">Confirm password</span>
+            <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} required autoComplete="new-password" placeholder="Re-enter password" className="glass-input" />
           </label>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <button type="submit" disabled={submitting} className="btn btn-primary w-full">
             {submitting ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-gray-500">
+        <p className="mt-5 text-center text-sm text-slate-500">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-blue-600 hover:underline">
+          <Link to="/login" className="font-bold text-emerald-600 hover:underline">
             Sign in
           </Link>
         </p>

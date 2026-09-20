@@ -1,227 +1,211 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
-import { notifications } from '../services/api';
+import { useEffect, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
+import { notifications } from "../services/api";
+
+function Pill({ to, children, end }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `rounded-full px-4 py-2 text-sm font-bold transition-colors ${
+          isActive
+            ? "bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30"
+            : "text-slate-600 hover:bg-white hover:text-emerald-800"
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  );
+}
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { unreadCount, markAsRead } = useNotifications();
   const navigate = useNavigate();
-  const location = useLocation();
-  const onHome = location.pathname === '/';
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [recentNotifs, setRecentNotifs] = useState([]);
-  const dropdownRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
 
-  useEffect(() => {
-    setNotifOpen(false);
-  }, [location.pathname]);
+  const isStaff = user && user.role !== "citizen";
 
-  useEffect(() => {
-    function onClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setNotifOpen(false);
-      }
+  const links = !user ? [] : isStaff
+    ? [{ to: "/dashboard", label: "Dashboard", end: true }]
+    : [
+        { to: "/map", label: "Map" },
+        { to: "/report", label: "Report" },
+        { to: "/my-reports", label: "My Reports" },
+      ];
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    navigate("/");
+  };
+
+  const handleNotifClick = async (id) => {
+    try {
+      if (id) await markAsRead(id);
+    } catch {
+      // ignore
     }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, []);
-
-  const toggleNotifs = async () => {
-    const next = !notifOpen;
-    setNotifOpen(next);
-    if (next && user) {
-      try {
-        const { data } = await notifications.list({ limit: 6 });
-        setRecentNotifs(data.notifications);
-      } catch {
-        setRecentNotifs([]);
-      }
-    }
+    setShowNotifs(false);
   };
-
-  const handleNotifClick = (n) => {
-    if (!n.read) markAsRead(n.id).catch(() => {});
-    setNotifOpen(false);
-    if (n.issueId) navigate(`/issues/${n.issueId}`);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const navLinkClass = ({ isActive }) =>
-    `px-3 py-2 font-medium transition-colors ${
-      isActive
-        ? 'text-green-400 underline decoration-green-400 underline-offset-8'
-        : onHome
-          ? 'text-white hover:underline hover:decoration-green-400 hover:text-white hover:underline-offset-8'
-          : 'text-gray-800 hover:underline hover:decoration-green-600 hover:text-green-600 hover:underline-offset-8'
-    }`;
-
-  const ghostBtnClass = onHome
-    ? 'rounded-lg border border-white/70 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/10'
-    : 'rounded-lg border border-gray-200 px-4 py-2 font-semibold text-gray-700 transition-colors hover:bg-gray-50';
 
   return (
-    <nav
-      className={`fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 ${
-        onHome ? 'bg-transparent' : 'bg-white shadow-sm'
-      }`}
-    >
-      <Link
-        to="/"
-        className={`flex items-center gap-2 text-[1.35rem] font-bold ${onHome ? 'text-white' : 'text-gray-800'}`}
-      >
-        <img src="/images/logo-nav.png" alt="Sudhar logo" className="block h-10 w-auto" />
-        Sudhar
-        <span className={`font-medium ${onHome ? 'text-white/75' : 'text-gray-500'}`}>— Lahore</span>
-      </Link>
+    <header className="fixed inset-x-0 top-3 z-50 px-4">
+      <div className="glass-strong mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl px-4 py-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src="/images/logo-nav.png" alt="Sudhar logo" className="h-9 w-auto" />
+          <span className="text-xl font-black tracking-tight text-emerald-950">
+            Sudhar
+          </span>
+        </Link>
 
-      <div className="flex items-center gap-1 sm:gap-2">
-        {user && user.role === 'citizen' && (
-          <>
-            <NavLink to="/map" className={navLinkClass}>
-              Map
-            </NavLink>
-            <NavLink to="/report" className={navLinkClass}>
-              Report
-            </NavLink>
-            <NavLink to="/my-reports" className={navLinkClass}>
-              My reports
-            </NavLink>
-          </>
-        )}
-        {user && user.role !== 'citizen' && (
-          <NavLink to="/dashboard" className={navLinkClass}>
-            Dashboard
-          </NavLink>
-        )}
-      </div>
+        <nav className="hidden items-center gap-1 md:flex">
+          {links.map((l) => (
+            <Pill key={l.to} to={l.to} end={l.end}>
+              {l.label}
+            </Pill>
+          ))}
+        </nav>
 
-      <div className="flex items-center gap-3">
-        {user ? (
-          <>
-            <div className="relative" ref={dropdownRef}>
+        <div className="flex items-center gap-2">
+          {user ? (
+            <>
               <button
-                onClick={toggleNotifs}
+                onClick={() => setShowNotifs((s) => !s)}
+                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/60 text-emerald-800 transition-colors hover:bg-white/90"
                 aria-label="Notifications"
-                className={`relative rounded-full p-2 transition-colors ${
-                  onHome ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'
-                }`}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 {unreadCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-bold text-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-orange-500 px-1 text-[11px] font-bold text-white shadow-md">
+                    {unreadCount}
                   </span>
                 )}
               </button>
 
-              {notifOpen && (
-                <div
-                  className={`absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-lg ${
-                    onHome ? 'border-gray-200 text-gray-800' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
-                    <span className="text-sm font-semibold text-gray-700">Notifications</span>
-                    <Link
-                      to="/notifications"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs font-semibold text-blue-600 hover:underline"
-                    >
-                      View all
-                    </Link>
-                  </div>
-                  {recentNotifs.length === 0 ? (
-                    <p className="px-4 py-8 text-center text-sm text-gray-500">
-                      No notifications yet
-                    </p>
-                  ) : (
-                    <ul className="max-h-72 overflow-y-auto">
-                      {recentNotifs.map((n) => (
-                        <li key={n.id} className="border-b border-gray-50 last:border-0">
-                          <button
-                            onClick={() => handleNotifClick(n)}
-                            className={`flex w-full items-start gap-2 px-4 py-2.5 text-left transition-colors hover:bg-gray-50 ${
-                              n.read ? 'opacity-60' : ''
-                            }`}
-                          >
-                            <span
-                              className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                                n.read ? 'bg-gray-300' : 'bg-green-500'
-                              }`}
-                            />
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-medium text-gray-800">
-                                {n.title}
-                              </span>
-                              <span className="block text-xs text-gray-500">
-                                {new Date(n.createdAt).toLocaleString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })}
-                              </span>
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <span
-              className={`hidden items-center gap-2 font-medium sm:flex ${onHome ? 'text-white' : 'text-gray-800'}`}
-            >
-              {user.name}
-              {user.role !== 'citizen' && (
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    onHome ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
-                  }`}
-                >
-                  {user.role === 'staff' ? user.department : 'Admin'}
+              <button
+                onClick={() => setOpen((o) => !o)}
+                className="flex items-center gap-2 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 py-1.5 pl-1.5 pr-3.5 text-white shadow-lg shadow-emerald-600/30 transition-transform hover:scale-[1.03]"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-sm font-extrabold uppercase">
+                  {(user.name || user.email || "?").slice(0, 2)}
                 </span>
-              )}
-            </span>
-            <button className={ghostBtnClass} onClick={handleLogout}>
+                <span className="text-sm font-bold">{user.name || user.email}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="hidden rounded-full px-4 py-2 text-sm font-bold text-emerald-900 hover:bg-white/40 sm:block">
+                Sign in
+              </Link>
+              <Link to="/register" className="rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-transform hover:scale-[1.03]">
+                Get started
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      {user && open && (
+        <div className="mx-auto mt-2 max-w-6xl">
+          <div className="glass-strong ml-auto w-56 rounded-2xl p-2">
+            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              {user.role?.toUpperCase()}
+            </p>
+            <Pill to={isStaff ? "/dashboard" : "/my-reports"} end>
+              {isStaff ? "Dashboard" : "My Reports"}
+            </Pill>
+            <Pill to="/">Home</Pill>
+            <button onClick={handleLogout} className="mt-1 w-full rounded-xl bg-rose-500/10 px-4 py-2 text-left text-sm font-bold text-rose-600 transition-colors hover:bg-rose-500/20">
               Sign out
             </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className={ghostBtnClass}>
-              Sign in
+          </div>
+        </div>
+      )}
+
+      {user && showNotifs && (
+        <div className="mx-auto mt-2 max-w-6xl">
+          <div className="glass-strong ml-auto w-80 rounded-2xl p-3">
+            <div className="mb-2 flex items-center justify-between px-2">
+              <span className="text-sm font-extrabold text-emerald-950">Notifications</span>
+              <Link to="/notifications" onClick={() => setShowNotifs(false)} className="text-xs font-bold text-emerald-600 hover:underline">
+                See all
+              </Link>
+            </div>
+            <LiveNotifList onPick={handleNotifClick} />
+          </div>
+        </div>
+      )}
+
+      {user && (
+        <nav className="mt-2 flex gap-1 overflow-x-auto md:hidden">
+          <div className="glass-strong flex gap-1 overflow-x-auto rounded-2xl p-1">
+            {links.map((l) => (
+              <Pill key={l.to} to={l.to} end={l.end}>
+                {l.label}
+              </Pill>
+            ))}
+            <Link to="/notifications" className="rounded-full px-4 py-2 text-sm font-bold text-slate-600 transition-colors hover:bg-white hover:text-emerald-800">
+              Notifications
             </Link>
-            <Link
-              to="/register"
-              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700"
-            >
-              Sign up
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
+          </div>
+        </nav>
+      )}
+    </header>
+  );
+}
+
+function LiveNotifList({ onPick }) {
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    notifications
+      .list({ limit: 5 })
+      .then(({ data }) => {
+        if (active) setItems(data.notifications);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!loaded) {
+    return <p className="px-2 py-3 text-sm text-emerald-700/70">Loading…</p>;
+  }
+
+  if (items.length === 0) {
+    return <p className="px-2 py-3 text-sm text-emerald-700/70">No notifications yet.</p>;
+  }
+
+  return (
+    <div className="max-h-72 space-y-1 overflow-y-auto glass-scroll">
+      {items.map((n) => (
+        <Link
+          key={n.id}
+          to={n.issueId ? `/issues/${n.issueId}` : "/notifications"}
+          onClick={() => onPick(n.id)}
+          className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-emerald-50/80"
+        >
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold text-emerald-950">{n.title}</span>
+            <span className="block truncate text-xs text-emerald-700/70">{n.message}</span>
+          </span>
+        </Link>
+      ))}
+    </div>
   );
 }

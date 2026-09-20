@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import { categoryIcon, LAHORE_CENTER, LAHORE_ZOOM } from '../utils/leaflet';
 
@@ -36,7 +36,7 @@ export default function LocationPickerMap({ position, onSelect }) {
       <ClickHandler onSelect={onSelect} />
       <FlyTo position={position} />
       {position && (
-        <Marker position={[position.lat, position.lng]} icon={categoryIcon('blue', true)} />
+        <Marker position={[position.lat, position.lng]} icon={categoryIcon('emerald', true)} />
       )}
     </MapContainer>
   );
