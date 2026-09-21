@@ -5,6 +5,7 @@ const { notifyIssueStakeholders } = require('./notificationService');
 const {
   CATEGORY_TO_DEPARTMENT,
   SLA_MS,
+  computePriority,
 } = require('../config/constants');
 
 const DUPLICATE_RADIUS_METERS = 50;
@@ -14,6 +15,7 @@ const LAHORE_BOUNDS = {
   minLng: 74.2,
   maxLng: 74.4,
 };
+const OPEN_PRIORITY_STATUSES = ['reported', 'acknowledged', 'assigned', 'in_progress'];
 
 const computeSlaDeadline = (category) => {
   const sla = SLA_MS[category] || SLA_MS.other;
@@ -29,6 +31,43 @@ const validateLahoreCoords = (lng, lat) => {
   if (!inBounds) {
     throw new ApiError(400, 'Coordinates must be within Lahore, Pakistan');
   }
+};
+
+const recomputePriority = (issue) => {
+  const priority = computePriority({
+    category: issue.category,
+    upvoteCount: issue.upvotes.length,
+    ageMs: Date.now() - issue.createdAt.getTime(),
+  });
+  if (priority !== issue.priority) {
+    issue.priority = priority;
+  }
+  return priority;
+};
+
+// Re-scans all open issues and persists any whose priority has drifted due to
+// age or upvotes. Called when a staff/admin queue is loaded.
+const refreshOpenPriorities = async () => {
+  const issues = await Issue.find({ status: { $in: OPEN_PRIORITY_STATUSES } }).select('category upvotes priority createdAt');
+  const now = Date.now();
+  const bulk = issues
+    .map((issue) => ({
+      id: issue._id,
+      priority: computePriority({
+        category: issue.category,
+        upvoteCount: issue.upvotes.length,
+        ageMs: now - issue.createdAt.getTime(),
+      }),
+      current: issue.priority,
+    }))
+    .filter((row) => row.priority !== row.current);
+  if (bulk.length === 0) return { updated: 0 };
+  await Promise.all(
+    bulk.map((row) =>
+      Issue.updateOne({ _id: row.id }, { $set: { priority: row.priority } })
+    )
+  );
+  return { updated: bulk.length };
 };
 
 // Creates an issue: auto-routes category -> department with no human involved.
@@ -47,6 +86,7 @@ const createIssue = async ({ title, description, category, lng, lat, address, im
     address,
     images,
     status: 'reported',
+    priority: computePriority({ category, upvoteCount: 0, ageMs: 0 }),
     slaDeadline: computeSlaDeadline(category),
     statusHistory: [
       {
@@ -149,6 +189,7 @@ const upvoteIssue = async (issueId, userId) => {
     throw new ApiError(400, 'You have already upvoted this issue');
   }
   issue.upvotes.push(userId);
+  recomputePriority(issue);
   await issue.save();
 
   // Notify the reporter that their report gained an upvote (not themselves).
@@ -161,7 +202,7 @@ const upvoteIssue = async (issueId, userId) => {
     });
   }
 
-  return { upvoteCount: issue.upvotes.length };
+  return { upvoteCount: issue.upvotes.length, priority: issue.priority };
 };
 
 // Citizen/staff flag an issue as spam or irrelevant for moderation review.
@@ -298,5 +339,6 @@ module.exports = {
   flagIssue,
   confirmResolution,
   getMyReports,
+  refreshOpenPriorities,
   DUPLICATE_RADIUS_METERS,
 };

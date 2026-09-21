@@ -345,7 +345,7 @@ export default function IssueDetail() {
         )}
       </div>
 
-      <div className="glass p-6">
+      <div className="glass mt-8 p-6">
         <h2 className="mb-4 font-bold text-emerald-950">Status history</h2>
         <ul className="space-y-3">
           {(issue.statusHistory?.length ? issue.statusHistory : []).map((entry, i) => (

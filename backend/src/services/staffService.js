@@ -2,6 +2,7 @@ const Issue = require('../models/Issue');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const { notifyUser } = require('./socketService');
+const { refreshOpenPriorities } = require('./issueService');
 const {
   STATUS_LABELS,
   STATUS_TRANSITIONS,
@@ -10,6 +11,17 @@ const {
 } = require('../config/constants');
 
 const OPEN_STATUSES = ['reported', 'acknowledged', 'assigned', 'in_progress'];
+
+// Sorts issues by priority (high → low), then newest first. Priority reflects
+// automatic scoring (category + upvotes + age), so urgent work surfaces first.
+const sortByPriority = (issues) =>
+  issues.slice().sort((a, b) => {
+    const order = { high: 1, medium: 2, low: 3, null: 4 };
+    const ap = order[a.priority] ?? 4;
+    const bp = order[b.priority] ?? 4;
+    if (ap !== bp) return ap - bp;
+    return new Date(b.reportedAt) - new Date(a.reportedAt);
+  });
 
 // Staff only see their own department's issues. Admins see everything.
 const baseQuery = (user) =>
@@ -23,6 +35,8 @@ const assertCanTouch = (issue, user) => {
 };
 
 const getQueue = async (user, { status, category, priority, flagged, search } = {}) => {
+  await refreshOpenPriorities();
+
   const query = baseQuery(user);
   if (status) query.status = status;
   if (category) query.category = category;
@@ -41,7 +55,7 @@ const getQueue = async (user, { status, category, priority, flagged, search } = 
     .sort({ createdAt: -1 })
     .limit(200);
 
-  return issues.map((issue) => staffView(issue));
+  return sortByPriority(issues.map((issue) => staffView(issue)));
 };
 
 const getStats = async (user) => {

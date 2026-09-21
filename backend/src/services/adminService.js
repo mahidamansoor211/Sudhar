@@ -1,9 +1,20 @@
 const Issue = require('../models/Issue');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
+const { refreshOpenPriorities } = require('./issueService');
 const { DEPARTMENTS, ROLES } = require('../config/constants');
 
 const OPEN_STATUSES = ['reported', 'acknowledged', 'assigned', 'in_progress'];
+
+// Sorts issues by priority (high → low), then newest first.
+const sortByPriority = (issues) =>
+  issues.slice().sort((a, b) => {
+    const order = { high: 1, medium: 2, low: 3, null: 4 };
+    const ap = order[a.priority] ?? 4;
+    const bp = order[b.priority] ?? 4;
+    if (ap !== bp) return ap - bp;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
 
 // === System-wide analytics for the admin console ===
 
@@ -141,6 +152,8 @@ const getAnalytics = async () => {
 // === Admin queue: all departments, with a department filter for the console ===
 
 const getAdminQueue = async ({ department, status, category, flagged, search } = {}) => {
+  await refreshOpenPriorities();
+
   const query = {};
   if (department === 'UNDEPARTED') query.department = null;
   else if (department) query.department = department;
@@ -160,26 +173,29 @@ const getAdminQueue = async ({ department, status, category, flagged, search } =
     .sort({ createdAt: -1 })
     .limit(300);
 
-  return issues.map((issue) => ({
-    id: issue._id,
-    title: issue.title,
-    description: issue.description,
-    category: issue.category,
-    department: issue.department,
-    address: issue.address,
-    images: issue.images,
-    status: issue.status,
-    priority: issue.priority,
-    slaDeadline: issue.slaDeadline,
-    upvoteCount: issue.upvotes.length,
-    flaggedAsSpam: issue.flaggedAsSpam,
-    flagCount: issue.flaggedBy.length,
-    resolutionConfirmedByReporter: issue.resolutionConfirmedByReporter,
-    reportedAt: issue.createdAt,
-    assignedTo: issue.assignedTo
-      ? { id: issue.assignedTo._id, name: issue.assignedTo.name, department: issue.assignedTo.department }
-      : null,
-  }));
+  return sortByPriority(
+    issues.map((issue) => ({
+      id: issue._id,
+      title: issue.title,
+      description: issue.description,
+      category: issue.category,
+      department: issue.department,
+      address: issue.address,
+      images: issue.images,
+      status: issue.status,
+      priority: issue.priority,
+      slaDeadline: issue.slaDeadline,
+      upvoteCount: issue.upvotes.length,
+      flaggedAsSpam: issue.flaggedAsSpam,
+      flagCount: issue.flaggedBy.length,
+      resolutionConfirmedByReporter: issue.resolutionConfirmedByReporter,
+      reportedAt: issue.createdAt,
+      createdAt: issue.createdAt,
+      assignedTo: issue.assignedTo
+        ? { id: issue.assignedTo._id, name: issue.assignedTo.name, department: issue.assignedTo.department }
+        : null,
+    }))
+  );
 };
 
 // === User management ===
