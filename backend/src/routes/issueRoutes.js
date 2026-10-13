@@ -13,5 +13,8 @@ router.get('/:id', issueController.getIssue);
 router.post('/:id/upvote', protect, issueController.upvote);
 router.post('/:id/flag', protect, issueController.flag);
 router.post('/:id/confirm-resolution', protect, upload.array('images', 5), issueController.confirmResolution);
+router.post('/:id/dispute', protect, issueController.disputeResolution);
+router.get('/:id/comments', issueController.listComments);
+router.post('/:id/comments', protect, issueController.addComment);
 
 module.exports = router;

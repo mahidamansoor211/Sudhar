@@ -11,7 +11,7 @@ import {
   DEPARTMENT_COLORS,
 } from '../utils/constants';
 
-const TABS = ['Overview', 'Issues', 'Users', 'Moderation'];
+const TABS = ['Overview', 'Issues', 'Escalations', 'Users', 'Moderation'];
 const OPEN = ['reported', 'acknowledged', 'assigned', 'in_progress'];
 const isOverdue = (issue) =>
   issue.slaDeadline && OPEN.includes(issue.status) && new Date(issue.slaDeadline) < new Date();
@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState('');
 
   const [clearing, setClearing] = useState(null);
+  const [escalations, setEscalations] = useState([]);
+  const [resolving, setResolving] = useState(null);
 
   const loadAnalytics = useCallback(async () => {
     try {
@@ -72,6 +74,16 @@ export default function AdminDashboard() {
     }
   }, [userSearch, roleFilter]);
 
+  const loadEscalations = useCallback(async () => {
+    try {
+      const { data } = await admin.escalations();
+      setEscalations(data.issues);
+      setError(null);
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Could not load escalations'));
+    }
+  }, []);
+
   useEffect(() => {
     const boot = async () => {
       setLoading(true);
@@ -84,8 +96,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (tab === 'Overview') loadAnalytics();
     if (tab === 'Issues') loadIssues();
+    if (tab === 'Escalations') loadEscalations();
     if (tab === 'Users') loadUsers();
-  }, [tab, loadAnalytics, loadIssues, loadUsers]);
+  }, [tab, loadAnalytics, loadIssues, loadEscalations, loadUsers]);
 
   const toggleUser = async (target) => {
     try {
@@ -105,6 +118,19 @@ export default function AdminDashboard() {
       setError(getApiErrorMessage(e, 'Could not clear spam flag'));
     } finally {
       setClearing(null);
+    }
+  };
+
+  const resolveEscalation = async (id) => {
+    setResolving(id);
+    try {
+      await admin.resolveEscalation(id);
+      setEscalations((prev) => prev.filter((i) => i.id !== id));
+      loadAnalytics();
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Could not resolve escalation'));
+    } finally {
+      setResolving(null);
     }
   };
 
@@ -186,6 +212,10 @@ export default function AdminDashboard() {
         />
       )}
 
+      {tab === 'Escalations' && (
+        <EscalationsPane escalations={escalations} onResolve={resolveEscalation} resolving={resolving} />
+      )}
+
       {tab === 'Moderation' && (
         <ModerationPane issues={flaggedIssues} onClearSpam={clearSpam} clearing={clearing} />
       )}
@@ -242,12 +272,13 @@ function OverviewPane({ analytics, maxTrend, maxDept, maxCat }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <KpiCard label="Total reports" value={a.totals?.total ?? '—'} accent="bg-emerald-700" />
         <KpiCard label="Open" value={a.totals?.open ?? '—'} accent="bg-teal-500" />
         <KpiCard label="Overdue" value={a.overdue ?? '—'} accent="bg-rose-500" />
         <KpiCard label="Resolved" value={a.totals?.resolved ?? '—'} accent="bg-green-600" />
         <KpiCard label="Flagged spam" value={a.flagged ?? '—'} accent="bg-orange-500" />
+        <KpiCard label="Escalated" value={a.escalated ?? '—'} accent="bg-amber-500" />
         <KpiCard label="SLA met" value={`${a.sla?.rate ?? 0}%`} accent="bg-lime-500" />
       </div>
 
@@ -392,6 +423,9 @@ function IssuesPane({ issues, dept, setDept, status, setStatus, search, setSearc
                     {issue.flaggedAsSpam && (
                       <span className="chip bg-rose-600 text-white">{issue.flagCount} flags</span>
                     )}
+                    {issue.escalated && (
+                      <span className="chip bg-amber-600 text-white">Escalated</span>
+                    )}
                   </div>
                   <h3 className="mt-2 font-bold text-emerald-950">{issue.title}</h3>
                   <p className="mt-0.5 text-sm text-slate-500">
@@ -463,6 +497,66 @@ function UsersPane({ users, userSearch, setUserSearch, roleFilter, setRoleFilter
               )}
             </li>
           ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EscalationsPane({ escalations, onResolve, resolving }) {
+  return (
+    <div>
+      {escalations.length === 0 ? (
+        <div className="glass p-16 text-center text-slate-500">
+          No escalated issues. Department staff send issues here when they need admin review.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {escalations.map((issue) => {
+            const cat = categoryByValue(issue.category);
+            return (
+              <li key={issue.id} className="glass card-hover border-amber-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="chip bg-emerald-100/80 text-emerald-700">{cat.label}</span>
+                      {issue.department && (
+                        <span className={`chip text-white ${DEPARTMENT_COLORS[issue.department]}`}>
+                          {issue.department}
+                        </span>
+                      )}
+                      <span className={`chip text-white ${STATUS_COLORS[issue.status]}`}>
+                        {STATUS_LABELS[issue.status]}
+                      </span>
+                      <span className="chip bg-amber-100 text-amber-700">Escalated</span>
+                    </div>
+                    <h3 className="mt-2 font-bold text-emerald-950">{issue.title}</h3>
+                    {issue.escalationReason && (
+                      <p className="mt-1 text-sm italic text-amber-800">"{issue.escalationReason}"</p>
+                    )}
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      {issue.address || 'No address'} · {issue.upvoteCount} upvotes
+                      {issue.escalatedBy?.name
+                        ? ` · escalated by ${issue.escalatedBy.name} ${issue.escalatedAt ? new Date(issue.escalatedAt).toLocaleDateString() : ''}`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link to={`/issues/${issue.id}`} className="btn btn-secondary !px-3 !py-1.5 !text-xs">
+                      Review
+                    </Link>
+                    <button
+                      onClick={() => onResolve(issue.id)}
+                      disabled={resolving === issue.id}
+                      className="btn btn-success !px-3 !py-1.5 !text-xs"
+                    >
+                      {resolving === issue.id ? 'Resolving...' : 'Resolve & clear'}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

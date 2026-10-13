@@ -91,6 +91,25 @@ const issueSchema = new mongoose.Schema(
       default: false,
     },
     flaggedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    escalated: {
+      type: Boolean,
+      default: false,
+    },
+    escalatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    escalatedAt: {
+      type: Date,
+      default: null,
+    },
+    escalationReason: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Escalation reason cannot exceed 1000 characters'],
+      default: '',
+    },
   },
   {
     timestamps: true,

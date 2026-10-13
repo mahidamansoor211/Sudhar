@@ -30,6 +30,11 @@ export default function IssueDetail() {
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [staffActionLoading, setStaffActionLoading] = useState(false);
 
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+
   const fetchIssue = () => issues.get(id).then(({ data }) => setIssue(data.issue));
 
   useEffect(() => {
@@ -45,6 +50,19 @@ export default function IssueDetail() {
       .finally(() => {
         if (active) setLoading(false);
       });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    issues.comments
+      .list(id)
+      .then(({ data }) => {
+        if (active) setComments(data.comments);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -91,6 +109,52 @@ export default function IssueDetail() {
 
   const handlePriority = (priority) =>
     runStaffAction(() => staff.setPriority(id, priority));
+
+  const handleEscalate = async () => {
+    if (!canManage()) return;
+    const reason = window.prompt('Why is this issue being escalated to the admin?');
+    if (!reason) return;
+    await runStaffAction(() => staff.escalate(id, reason.trim()));
+  };
+
+  const handleClearEscalation = async () => {
+    if (!canManage()) return;
+    if (!window.confirm('Clear the escalation and hand this issue back to the department?')) return;
+    await runStaffAction(() => staff.clearEscalation(id));
+  };
+
+  const handleDispute = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      await issues.dispute(id, disputeReason.trim());
+      setDisputeReason('');
+      await fetchIssue();
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Could not dispute resolution'));
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    const text = commentText.trim();
+    if (!text) return;
+    setCommentSubmitting(true);
+    try {
+      const { data } = await issues.comments.add(id, text);
+      setComments((prev) => [...prev, data.comment]);
+      setCommentText('');
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Could not post comment'));
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
 
   const handleUpvote = async () => {
     if (!user) {
@@ -264,8 +328,21 @@ export default function IssueDetail() {
           issue.submittedByMe &&
           issue.status === 'resolved' &&
           (issue.resolutionConfirmedByReporter || confirmSuccess) && (
-            <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 font-bold text-emerald-700 backdrop-blur">
-              You confirmed this issue is resolved.
+            <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 backdrop-blur">
+              <p className="mb-3 font-bold text-emerald-700">You confirmed this issue is resolved.</p>
+              <p className="mb-2 text-sm text-emerald-700">
+                If the problem actually came back or was never properly fixed, you can dispute the resolution and reopen
+                it.
+              </p>
+              <input
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                placeholder="Why are you disputing this? (optional)"
+                className="glass-input mb-2 !text-sm"
+              />
+              <button onClick={handleDispute} className="btn btn-danger !px-4 !py-2 !text-sm">
+                Dispute resolution &amp; reopen
+              </button>
             </div>
           )}
 
@@ -341,9 +418,53 @@ export default function IssueDetail() {
                 </button>
               ))}
             </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/60 pt-4">
+              {issue.escalated ? (
+                <button
+                  onClick={handleClearEscalation}
+                  disabled={staffActionLoading}
+                  className="btn btn-primary !px-4 !py-1.5 !text-xs"
+                >
+                  Clear escalation (back to department)
+                </button>
+              ) : (
+                <button
+                  onClick={handleEscalate}
+                  disabled={staffActionLoading}
+                  className="btn btn-danger !px-4 !py-1.5 !text-xs"
+                >
+                  Escalate to admin
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      {issue.escalated && (
+        <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50/90 p-5 backdrop-blur">
+          <div className="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <h2 className="font-bold text-amber-800">Escalated for admin review</h2>
+              {issue.escalationReason && <p className="mt-1 text-sm text-amber-700">{issue.escalationReason}</p>}
+              {issue.escalatedAt && (
+                <p className="mt-1 text-xs font-medium text-amber-600/80">
+                  {new Date(issue.escalatedAt).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="glass mt-8 p-6">
         <h2 className="mb-4 font-bold text-emerald-950">Status history</h2>
@@ -366,6 +487,61 @@ export default function IssueDetail() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="glass mt-8 p-6">
+        <h2 className="mb-4 font-bold text-emerald-950">Discussion</h2>
+        {comments.length === 0 ? (
+          <p className="mb-4 text-sm text-slate-400">No comments yet — start the conversation.</p>
+        ) : (
+          <ul className="mb-5 space-y-4">
+            {comments.map((c) => (
+              <li key={c.id} className="rounded-xl bg-white/50 p-3.5">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-emerald-900">{c.user?.name || 'Deleted user'}</span>
+                  {c.user?.role === 'staff' && <span className="chip bg-emerald-100/80 !py-0.5 text-[10px] text-emerald-700">Staff</span>}
+                  {c.user?.role === 'admin' && <span className="chip bg-violet-100/80 !py-0.5 text-[10px] text-violet-700">Admin</span>}
+                  <time className="ml-auto text-xs font-medium text-slate-400">
+                    {new Date(c.createdAt).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-slate-600">{c.text}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {user ? (
+          <div>
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="Share an update about this issue..."
+              className="glass-input mb-2 w-full !text-sm"
+            />
+            <button
+              onClick={handleAddComment}
+              disabled={commentSubmitting || !commentText.trim()}
+              className="btn btn-success"
+            >
+              {commentSubmitting ? 'Posting...' : 'Post comment'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">
+            <Link to="/login" className="font-bold text-emerald-600 hover:underline">
+              Sign in
+            </Link>{' '}
+            to join the discussion.
+          </p>
+        )}
       </div>
     </div>
   );

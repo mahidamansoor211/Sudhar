@@ -9,16 +9,29 @@ const analytics = asyncHandler(async (req, res) => {
   res.json({ success: true, ...data });
 });
 
-// GET /api/admin/issues?department=&status=&category=&flagged=&search=
+// GET /api/admin/issues?department=&status=&category=&flagged=&escalated=&search=
 const listIssues = asyncHandler(async (req, res) => {
   const issues = await adminService.getAdminQueue({
     department: req.query.department,
     status: req.query.status,
     category: req.query.category,
     flagged: req.query.flagged,
+    escalated: req.query.escalated,
     search: req.query.search,
   });
   res.json({ success: true, count: issues.length, issues });
+});
+
+// GET /api/admin/escalations
+const listEscalations = asyncHandler(async (req, res) => {
+  const issues = await adminService.getEscalatedIssues();
+  res.json({ success: true, count: issues.length, issues });
+});
+
+// POST /api/admin/issues/:id/resolve-escalation
+const resolveEscalation = asyncHandler(async (req, res) => {
+  const result = await adminService.resolveEscalation(req.params.id);
+  res.json({ success: true, ...result });
 });
 
 // GET /api/admin/users?search=&role=&active=
@@ -47,4 +60,4 @@ const clearSpam = asyncHandler(async (req, res) => {
   res.json({ success: true, ...result });
 });
 
-module.exports = { analytics, listIssues, listUsers, toggleUser, clearSpam };
+module.exports = { analytics, listIssues, listEscalations, resolveEscalation, listUsers, toggleUser, clearSpam };

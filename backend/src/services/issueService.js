@@ -279,6 +279,47 @@ const confirmResolution = async (issueId, userId, { confirmationImages = [] }) =
   return { resolutionConfirmedByReporter: true };
 };
 
+// A reporter who disagrees with the resolution can reopen the issue so the
+// department + admins see it needs another look (that's our dispute flow).
+const disputeResolution = async (issueId, userId, { reason = '' } = {}) => {
+  const { notifyIssueStakeholders } = require('./notificationService');
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  if (!issue.reportedBy.equals(userId)) {
+    throw new ApiError(403, 'Only the reporter can dispute a resolution');
+  }
+  if (issue.status !== 'resolved') {
+    throw new ApiError(400, 'Only resolved issues can be disputed');
+  }
+  if (!issue.resolutionConfirmedByReporter) {
+    throw new ApiError(400, 'Resolution has not been confirmed yet');
+  }
+
+  issue.status = 'reported';
+  issue.resolutionConfirmedByReporter = false;
+  issue.statusHistory.push({
+    status: 'reported',
+    changedBy: userId,
+    note: reason.trim() ? `Disputed resolution: ${reason.trim()}` : 'Disputed resolution by reporter',
+  });
+  await issue.save();
+
+  await notifyIssueStakeholders({
+    department: issue.department,
+    excludeUserId: userId,
+    payload: {
+      type: 'escalation',
+      issueId: issue._id,
+      title: 'Resolution disputed by reporter',
+      message: `"${issue.title}" was reopened because the reporter disagrees with the resolution.`,
+    },
+  });
+
+  return { success: true, status: issue.status };
+};
+
 // All issues the user submitted, and optionally ones they upvoted.
 const getMyReports = async (userId, { includeUpvoted = true } = {}) => {
   const query = { reportedBy: userId };
@@ -318,6 +359,9 @@ const issueToView = (issue, userId) => ({
   upvotedByMe: userId ? issue.upvotes.some((id) => id.equals(userId)) : false,
   flaggedAsSpam: issue.flaggedAsSpam,
   flaggedByMe: userId ? issue.flaggedBy.some((id) => id.equals(userId)) : false,
+  escalated: issue.escalated,
+  escalationReason: issue.escalationReason,
+  escalatedAt: issue.escalatedAt,
   resolutionConfirmedByReporter: issue.resolutionConfirmedByReporter,
   reporter: issue.reportedBy,
   reportedAt: issue.createdAt,
@@ -338,6 +382,7 @@ module.exports = {
   upvoteIssue,
   flagIssue,
   confirmResolution,
+  disputeResolution,
   getMyReports,
   refreshOpenPriorities,
   DUPLICATE_RADIUS_METERS,

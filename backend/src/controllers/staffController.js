@@ -59,10 +59,24 @@ const reroute = asyncHandler(async (req, res) => {
   res.json({ success: true, ...result });
 });
 
+// PATCH /api/staff/issues/:id/escalate   body: { reason }
+const escalate = asyncHandler(async (req, res) => {
+  const result = await staffService.escalateIssue(req.params.id, req.user, {
+    reason: req.body.reason || '',
+  });
+  res.json({ success: true, ...result });
+});
+
+// PATCH /api/staff/issues/:id/clear-escalation   (admin only)
+const clearEscalation = asyncHandler(async (req, res) => {
+  const result = await staffService.clearEscalation(req.params.id, req.user);
+  res.json({ success: true, ...result });
+});
+
 // GET /api/staff/members  (assignee dropdown)
 const members = asyncHandler(async (req, res) => {
   const staffList = await staffService.getDepartmentStaff(req.user);
   res.json({ success: true, staff: staffList });
 });
 
-module.exports = { listQueue, stats, changeStatus, assign, priority, reroute, members };
+module.exports = { listQueue, stats, changeStatus, assign, priority, reroute, escalate, clearEscalation, members };

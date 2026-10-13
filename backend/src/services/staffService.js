@@ -227,6 +227,67 @@ const rerouteIssue = async (issueId, user, { department }) => {
   return { issue: staffView(updated) };
 };
 
+// Escalates an issue to admins when the department cannot resolve it (stuck,
+// disputed, cross-department, or blocked). Staff and admins may escalate.
+const escalateIssue = async (issueId, user, { reason = '' }) => {
+  if (!reason.trim()) {
+    throw new ApiError(400, 'An escalation reason is required');
+  }
+  const { notifyAdmins } = require('./notificationService');
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  assertCanTouch(issue, user);
+
+  issue.escalated = true;
+  issue.escalatedBy = user._id;
+  issue.escalatedAt = new Date();
+  issue.escalationReason = reason.trim();
+  issue.statusHistory.push({
+    status: issue.status,
+    changedBy: user._id,
+    note: `Escalated to admin: ${reason.trim()}`,
+  });
+  await issue.save();
+
+  await notifyAdmins({
+    payload: {
+      type: 'escalation',
+      issueId: issue._id,
+      title: 'Issue escalated for review',
+      message: `"${issue.title}" was escalated by ${user.name}. Reason: ${reason.trim()}`,
+    },
+  });
+
+  const updated = await Issue.findById(issueId).populate('assignedTo', 'name department');
+  return { issue: staffView(updated) };
+};
+
+// Clears the escalation flag once an admin has resolved/acknowledged it.
+const clearEscalation = async (issueId, user) => {
+  const { notifyUser } = require('./socketService');
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  assertCanTouch(issue, user);
+
+  issue.escalated = false;
+  issue.escalationReason = '';
+  issue.escalatedBy = null;
+  issue.escalatedAt = null;
+  issue.statusHistory.push({
+    status: issue.status,
+    changedBy: user._id,
+    note: 'Escalation cleared by admin',
+  });
+  await issue.save();
+
+  const updated = await Issue.findById(issueId).populate('assignedTo', 'name department');
+  return { issue: staffView(updated) };
+};
+
 const getDepartmentStaff = async (user) => {
   const query =
     user.role === 'admin'
@@ -251,6 +312,10 @@ const staffView = (issue) => ({
   flaggedAsSpam: issue.flaggedAsSpam,
   flagCount: issue.flaggedBy.length,
   resolutionConfirmedByReporter: issue.resolutionConfirmedByReporter,
+  escalated: issue.escalated,
+  escalationReason: issue.escalationReason,
+  escalatedBy: issue.escalatedBy,
+  escalatedAt: issue.escalatedAt,
   reporter: issue.reportedBy,
   assignedTo: issue.assignedTo
     ? { id: issue.assignedTo._id, name: issue.assignedTo.name, department: issue.assignedTo.department }
@@ -271,5 +336,7 @@ module.exports = {
   assignIssue,
   setPriority,
   rerouteIssue,
+  escalateIssue,
+  clearEscalation,
   getDepartmentStaff,
 };

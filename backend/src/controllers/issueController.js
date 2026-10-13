@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const { CATEGORIES } = require('../config/constants');
 const { saveImages } = require('../services/uploadService');
 const issueService = require('../services/issueService');
+const commentService = require('../services/commentService');
 
 // POST /api/issues  (multipart/form-data)
 // Fields: title, description, category, lng, lat, address, images[]
@@ -109,6 +110,35 @@ const myReports = asyncHandler(async (req, res) => {
   res.json({ success: true, count: reports.length, reports });
 });
 
+// GET /api/issues/:id/comments
+const listComments = asyncHandler(async (req, res) => {
+  const comments = await commentService.getComments(req.params.id);
+  res.json({ success: true, count: comments.length, comments });
+});
+
+// POST /api/issues/:id/comments  body: { text }
+const addComment = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  if (!text || !text.trim()) {
+    throw new ApiError(400, 'Comment text is required');
+  }
+  const comment = await commentService.addComment({
+    issueId: req.params.id,
+    userId: req.user._id,
+    userName: req.user.name,
+    text: text.trim(),
+  });
+  res.status(201).json({ success: true, comment });
+});
+
+// POST /api/issues/:id/dispute   body: { reason }
+const disputeResolution = asyncHandler(async (req, res) => {
+  const result = await issueService.disputeResolution(req.params.id, req.user._id, {
+    reason: req.body.reason || '',
+  });
+  res.json({ success: true, ...result });
+});
+
 module.exports = {
   createIssue,
   listIssues,
@@ -117,5 +147,8 @@ module.exports = {
   upvote,
   flag,
   confirmResolution,
+  disputeResolution,
   myReports,
+  listComments,
+  addComment,
 };

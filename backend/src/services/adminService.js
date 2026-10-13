@@ -145,13 +145,14 @@ const getAnalytics = async () => {
     sla,
     overdue: departmentStats.reduce((sum, d) => sum + d.overdue, 0),
     flagged: await Issue.countDocuments({ flaggedAsSpam: true }),
+    escalated: await Issue.countDocuments({ escalated: true }),
     trend,
   };
 };
 
 // === Admin queue: all departments, with a department filter for the console ===
 
-const getAdminQueue = async ({ department, status, category, flagged, search } = {}) => {
+const getAdminQueue = async ({ department, status, category, flagged, escalated, search } = {}) => {
   await refreshOpenPriorities();
 
   const query = {};
@@ -160,6 +161,7 @@ const getAdminQueue = async ({ department, status, category, flagged, search } =
   if (status) query.status = status;
   if (category) query.category = category;
   if (flagged === 'true') query.flaggedAsSpam = true;
+  if (escalated === 'true') query.escalated = true;
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: 'i' } },
@@ -188,6 +190,9 @@ const getAdminQueue = async ({ department, status, category, flagged, search } =
       upvoteCount: issue.upvotes.length,
       flaggedAsSpam: issue.flaggedAsSpam,
       flagCount: issue.flaggedBy.length,
+      escalated: issue.escalated,
+      escalationReason: issue.escalationReason,
+      escalatedAt: issue.escalatedAt,
       resolutionConfirmedByReporter: issue.resolutionConfirmedByReporter,
       reportedAt: issue.createdAt,
       createdAt: issue.createdAt,
@@ -196,6 +201,51 @@ const getAdminQueue = async ({ department, status, category, flagged, search } =
         : null,
     }))
   );
+};
+
+// All escalated issues for the admin review area.
+const getEscalatedIssues = async () => {
+  const issues = await Issue.find({ escalated: true })
+    .populate('assignedTo', 'name department')
+    .populate('escalatedBy', 'name')
+    .sort({ escalatedAt: -1 })
+    .limit(200);
+
+  return issues.map((issue) => ({
+    id: issue._id,
+    title: issue.title,
+    description: issue.description,
+    category: issue.category,
+    department: issue.department,
+    address: issue.address,
+    status: issue.status,
+    priority: issue.priority,
+    slaDeadline: issue.slaDeadline,
+    upvoteCount: issue.upvotes.length,
+    flaggedAsSpam: issue.flaggedAsSpam,
+    escalationReason: issue.escalationReason,
+    escalatedBy: issue.escalatedBy ? { id: issue.escalatedBy._id, name: issue.escalatedBy.name } : null,
+    escalatedAt: issue.escalatedAt,
+    reportedAt: issue.createdAt,
+    createdAt: issue.createdAt,
+    assignedTo: issue.assignedTo
+      ? { id: issue.assignedTo._id, name: issue.assignedTo.name, department: issue.assignedTo.department }
+      : null,
+  }));
+};
+
+// Admin clears an escalation after giving the issue a new direction.
+const resolveEscalation = async (issueId) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    throw new ApiError(404, 'Issue not found');
+  }
+  issue.escalated = false;
+  issue.escalationReason = '';
+  issue.escalatedBy = null;
+  issue.escalatedAt = null;
+  await issue.save();
+  return { id: issue._id, escalated: false };
 };
 
 // === User management ===
@@ -260,4 +310,12 @@ const clearSpam = async (issueId) => {
   return { id: issue._id, flaggedAsSpam: false };
 };
 
-module.exports = { getAnalytics, getAdminQueue, getUsers, setUserActive, clearSpam };
+module.exports = {
+  getAnalytics,
+  getAdminQueue,
+  getEscalatedIssues,
+  resolveEscalation,
+  getUsers,
+  setUserActive,
+  clearSpam,
+};

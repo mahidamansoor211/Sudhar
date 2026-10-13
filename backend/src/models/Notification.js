@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['status_change', 'upvote', 'assigned', 'comment', 'resolution_confirmed', 'flagged', 'system', 'new_issue', 'flag'],
+      enum: ['status_change', 'upvote', 'assigned', 'comment', 'resolution_confirmed', 'flagged', 'system', 'new_issue', 'flag', 'escalation'],
       required: true,
     },
     issueId: {

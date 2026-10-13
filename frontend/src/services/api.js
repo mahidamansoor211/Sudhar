@@ -53,7 +53,12 @@ export const issues = {
     api.post(`/issues/${id}/confirm-resolution`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  dispute: (id, reason) => api.post(`/issues/${id}/dispute`, { reason }),
   myReports: (params) => api.get('/issues/mine', { params }),
+  comments: {
+    list: (id) => api.get(`/issues/${id}/comments`),
+    add: (id, text) => api.post(`/issues/${id}/comments`, { text }),
+  },
 };
 
 export const notifications = {
@@ -71,11 +76,15 @@ export const staff = {
   assign: (id, data) => api.post(`/staff/issues/${id}/assign`, data),
   setPriority: (id, priority) => api.patch(`/staff/issues/${id}/priority`, { priority }),
   reroute: (id, department) => api.patch(`/staff/issues/${id}/reroute`, { department }),
+  escalate: (id, reason) => api.patch(`/staff/issues/${id}/escalate`, { reason }),
+  clearEscalation: (id) => api.patch(`/staff/issues/${id}/clear-escalation`),
 };
 
 export const admin = {
   stats: () => api.get('/admin/stats'),
   issues: (params) => api.get('/admin/issues', { params }),
+  escalations: () => api.get('/admin/escalations'),
+  resolveEscalation: (id) => api.post(`/admin/issues/${id}/resolve-escalation`),
   users: (params) => api.get('/admin/users', { params }),
   setUserActive: (id, isActive) =>
     api.patch(`/admin/users/${id}/status`, { isActive }),
