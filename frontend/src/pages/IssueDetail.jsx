@@ -215,6 +215,9 @@ export default function IssueDetail() {
     }
   };
 
+  const backTarget = !user ? '/' : user.role === 'staff' || user.role === 'admin' ? '/dashboard' : '/map';
+  const backLabel = !user ? 'Back to home' : user.role === 'staff' || user.role === 'admin' ? 'Back to dashboard' : 'Back to map';
+
   if (loading) {
     return <div className="mx-auto max-w-3xl px-4 pt-28 text-center text-slate-500">Loading...</div>;
   }
@@ -223,8 +226,8 @@ export default function IssueDetail() {
     return (
       <div className="mx-auto max-w-3xl px-4 pt-28 text-center">
         <p className="mb-4 text-rose-600">{error || 'Issue not found.'}</p>
-        <Link to="/map" className="btn btn-secondary !px-5 !py-2.5 !text-sm">
-          Back to map
+        <Link to={backTarget} className="btn btn-secondary !px-5 !py-2.5 !text-sm">
+          {backLabel}
         </Link>
       </div>
     );
@@ -234,11 +237,11 @@ export default function IssueDetail() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-16 pt-24">
-      <Link to="/map" className="mb-4 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:underline">
+      <Link to={backTarget} className="mb-4 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:underline">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        Back to map
+        {backLabel}
       </Link>
 
       <div className="glass-strong p-6 sm:p-8">

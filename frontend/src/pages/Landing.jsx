@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const DEPT_SIGILS = [
-  { code: "WASA", name: "Water & Sanitation Agency", desc: "Water supply, drainage, sewage" },
-  { code: "LESCO", name: "Lahore Electric Supply Co.", desc: "Streetlights, power infrastructure" },
-  { code: "LWMC", name: "Lahore Waste Mgmt. Company", desc: "Garbage collection, sanitary" },
-  { code: "TEPA", name: "Traffic Engineering & Planning Agency", desc: "Roads, potholes, signals" },
+  { code: "WASA", desc: "Water supply, drainage, sewage" },
+  { code: "LESCO", desc: "Streetlights, power infrastructure" },
+  { code: "LWMC", desc: "Garbage collection, sanitary" },
+  { code: "TEPA", desc: "Roads, potholes, signals" },
 ];
 
 export default function Landing() {
@@ -71,7 +71,6 @@ export default function Landing() {
                   className="group rounded-xl border border-emerald-200/70 bg-white/70 p-3 text-center shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                 >
                   <p className="text-lg font-black tracking-wide text-emerald-800">{d.code}</p>
-                  <p className="mt-1 text-xs font-bold uppercase leading-tight text-slate-600">{d.name}</p>
                   <p className="mt-1 text-[11px] text-slate-400">{d.desc}</p>
                 </div>
               ))}

@@ -22,6 +22,62 @@ function Pill({ to, children, end }) {
   );
 }
 
+function MenuItem({ to, children, icon, end, onClick }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+          isActive
+            ? "bg-emerald-600/10 text-emerald-800"
+            : "text-slate-600 hover:bg-white/80 hover:text-emerald-800"
+        }`
+      }
+    >
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
+      {children}
+    </NavLink>
+  );
+}
+
+const iconProps = {
+  xmlns: "http://www.w3.org/2000/svg",
+  className: "h-4 w-4",
+  fill: "none",
+  viewBox: "0 0 24 24",
+  stroke: "currentColor",
+  strokeWidth: 2,
+};
+const Icons = {
+  home: (
+    <svg {...iconProps}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4h2v4a1 1 0 001 1m-4 0h4" />
+    </svg>
+  ),
+  grid: (
+    <svg {...iconProps}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  ),
+  clipboard: (
+    <svg {...iconProps}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  ),
+  bell: (
+    <svg {...iconProps}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  ),
+  logout: (
+    <svg {...iconProps}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  ),
+};
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { unreadCount, markAsRead } = useNotifications();
@@ -115,15 +171,55 @@ export default function Navbar() {
 
       {user && open && (
         <div className="mx-auto mt-2 max-w-6xl">
-          <div className="glass-strong ml-auto w-56 rounded-2xl p-2">
-            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              {user.role?.toUpperCase()}
-            </p>
-            <Pill to={isStaff ? "/dashboard" : "/my-reports"} end>
-              {isStaff ? "Dashboard" : "My Reports"}
-            </Pill>
-            <Pill to="/">Home</Pill>
-            <button onClick={handleLogout} className="mt-1 w-full rounded-xl bg-rose-500/10 px-4 py-2 text-left text-sm font-bold text-rose-600 transition-colors hover:bg-rose-500/20">
+          <div
+            className="glass-strong ml-auto w-64 overflow-hidden rounded-2xl p-2 shadow-xl shadow-emerald-950/10"
+            onMouseLeave={() => setOpen(false)}
+          >
+            <div className="mb-1 flex items-center gap-3 rounded-xl bg-white/50 px-3 py-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 text-sm font-extrabold uppercase text-white shadow-md shadow-emerald-600/30">
+                {(user.name || user.email || "?").slice(0, 2)}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-extrabold text-emerald-950">
+                  {user.name || user.email}
+                </p>
+                <p className="truncate text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                  {user.role}
+                  {user.department ? ` · ${user.department}` : ""}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-0.5">
+              {isStaff ? (
+                <MenuItem to="/dashboard" end icon={Icons.grid} onClick={() => setOpen(false)}>
+                  Dashboard
+                </MenuItem>
+              ) : (
+                <>
+                  <MenuItem to="/my-reports" icon={Icons.clipboard} onClick={() => setOpen(false)}>
+                    My Reports
+                  </MenuItem>
+                  <MenuItem to="/report" icon={Icons.clipboard} onClick={() => setOpen(false)}>
+                    Report an issue
+                  </MenuItem>
+                </>
+              )}
+              <MenuItem to="/notifications" icon={Icons.bell} onClick={() => setOpen(false)}>
+                Notifications
+              </MenuItem>
+              <MenuItem to="/" end icon={Icons.home} onClick={() => setOpen(false)}>
+                Home
+              </MenuItem>
+            </div>
+
+            <div className="my-2 h-px bg-emerald-950/10" />
+
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-rose-600 transition-colors hover:bg-rose-500/10"
+            >
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">{Icons.logout}</span>
               Sign out
             </button>
           </div>
@@ -132,7 +228,10 @@ export default function Navbar() {
 
       {user && showNotifs && (
         <div className="mx-auto mt-2 max-w-6xl">
-          <div className="glass-strong ml-auto w-80 rounded-2xl p-3">
+          <div
+            className="glass-strong ml-auto w-80 rounded-2xl p-3 shadow-xl shadow-emerald-950/10"
+            onMouseLeave={() => setShowNotifs(false)}
+          >
             <div className="mb-2 flex items-center justify-between px-2">
               <span className="text-sm font-extrabold text-emerald-950">Notifications</span>
               <Link to="/notifications" onClick={() => setShowNotifs(false)} className="text-xs font-bold text-emerald-600 hover:underline">
